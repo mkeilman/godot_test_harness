@@ -10,6 +10,7 @@ const SUFFIX_SCRIPT: String = ".gd"
 const PREFIX_TEST: String = "test_"
 const KEY_OBJ = "obj"
 const KEY_METHODS = "methods"
+const POOP = "poop"
 
 var num_tests: int = 0
 var num_tests_passed: int = 0
