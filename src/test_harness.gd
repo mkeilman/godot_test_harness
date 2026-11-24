@@ -10,7 +10,6 @@ const SUFFIX_SCRIPT: String = ".gd"
 const PREFIX_TEST: String = "test_"
 const KEY_SUITE = "suite"
 const KEY_METHODS = "methods"
-const POOP = "poop"
 
 var num_tests: int = 0
 var num_tests_passed: int = 0
@@ -31,7 +30,7 @@ func _run() -> void:
 	get_test_files()
 	gather_tests()
 	run_tests()
-	quit()
+	quit(0 if passed else 100)
 
 func is_valid_file(filename: String, dir: String) -> bool:
 	return filename.begins_with(PREFIX_TEST) && \
@@ -43,6 +42,7 @@ func path_to_file(filename: String, path: String) -> String:
 
 func gather_tests() -> void:
 	for f in test_files:
+		# each
 		# must make an object to get the methods
 		var suite = load(f).new()
 		var m = suite.get_method_list()
@@ -92,7 +92,7 @@ func run_tests() -> void:
 					"n": n
 					"p": p,
 					"x": x,
-					"r": r,
+					"r": "PASSED" if r else "FAILED",
 				}
 			)
 		)
@@ -159,9 +159,21 @@ class TestCase:
 			r_txt = "[color=green][b]passed[/b][/color]"
 		else:
 			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
-		#DebugUtils.debug_println(r_txt, true)
+		DebugUtils.debug_println(r_txt, true)
 
 
+class TestOp:
+	var passed: bool = false
+	
+	func eval(did_pass: bool, err_msg: String = "") -> void:
+		var r_txt: String
+		passed = did_pass
+		if did_pass:
+			r_txt = "[color=green][b]passed[/b][/color]"
+		else:
+			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
+		DebugUtils.debug_println(r_txt, true)
+	
 # a test suite maps to a file and comprises multiple test cases.
 # it passes only if all of the cases pass
 class TestSuite:
