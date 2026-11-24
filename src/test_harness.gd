@@ -130,10 +130,6 @@ class TestSuite:
 	func _eval(did_pass: bool, err_msg: String = "") -> void:
 		results.append(did_pass)
 		var r_txt: String = TestUtils.pass_fail_str(did_pass) + ("" if did_pass else " - " + err_msg)
-		#if did_pass:
-		#	r_txt = "[color=green][b]passed[/b][/color]"
-		#else:
-		#	r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
 		DebugUtils.debug_println(r_txt, true)
 	
 	func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
@@ -142,9 +138,9 @@ class TestSuite:
 			var diff = abs(expected - actual)
 			_eval(
 				diff <= tolerance,
-				"""
-				actual {actual} outside tolerance {tolerance} of {expected}: {diff}
-				""".format({"actual": actual, "tolerance": tolerance, "expected": expected, "diff": diff})
+				"actual {actual} outside tolerance {tolerance} of {expected}: {diff}".format(
+					{"actual": actual, "tolerance": tolerance, "expected": expected, "diff": diff}
+				)
 			)
 			return
 		
@@ -159,17 +155,15 @@ class TestSuite:
 			return
 		_eval(
 			actual > expected,
-			"""
-			actual {actual} <= {expected}: {diff}
-			""".format({"actual": actual, "expected": expected})
+			"actual {actual} <= {expected}: {diff}".format({"actual": actual, "expected": expected})
 		)
 
 	func has_count(expected: int, actual: Array) -> void:
 		_eval(
 			actual.size() == expected,
-			"""
-			actual has wrong number of items: {actual} != {expected}
-			""".format({"actual": actual.size(), "expected": expected})
+			"actual has wrong number of items: {actual} != {expected}".format(
+				{"actual": actual.size(), "expected": expected}
+			)
 		)
 
 	func is_false(actual: bool) -> void:
