@@ -127,9 +127,9 @@ class TestUtils:
 class TestSuite:
 	var results: Array[bool] = []
 	
-	func _eval(did_pass: bool, err_msg: String = "") -> void:
+	func _eval(op: String, did_pass: bool, err_msg: String = "") -> void:
 		results.append(did_pass)
-		var r_txt: String = TestUtils.pass_fail_str(did_pass) + ("" if did_pass else " - " + err_msg)
+		var r_txt: String = "\t" + op + ": " + TestUtils.pass_fail_str(did_pass) + ("" if did_pass else " - " + err_msg)
 		DebugUtils.debug_println(r_txt, true)
 	
 	func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
@@ -137,6 +137,7 @@ class TestSuite:
 		if expected is int || expected is float:
 			var diff = abs(expected - actual)
 			_eval(
+				"eq",
 				diff <= tolerance,
 				"actual {actual} outside tolerance {tolerance} of {expected}: {diff}".format(
 					{"actual": actual, "tolerance": tolerance, "expected": expected, "diff": diff}
@@ -145,21 +146,23 @@ class TestSuite:
 			return
 		
 		# everything else, using ==
-		_eval(expected == actual, "actual {actual} != {expected}".format({"actual": actual, "expected": expected}))
+		_eval("eq", expected == actual, "actual {actual} != {expected}".format({"actual": actual, "expected": expected}))
 
 	# can compare ints or floats
 	func gt(expected: Variant, actual: Variant) -> void:
 		# numbers
 		if ! expected is int && ! expected is float:
-			_eval(false, "expected value must be a number: {expected}".format({"expected": expected}))
+			_eval("gt", false, "expected value must be a number: {expected}".format({"expected": expected}))
 			return
 		_eval(
+			"gt",
 			actual > expected,
 			"actual {actual} <= {expected}: {diff}".format({"actual": actual, "expected": expected})
 		)
 
 	func has_count(expected: int, actual: Array) -> void:
 		_eval(
+			"has_count",
 			actual.size() == expected,
 			"actual has wrong number of items: {actual} != {expected}".format(
 				{"actual": actual.size(), "expected": expected}
@@ -167,16 +170,16 @@ class TestSuite:
 		)
 
 	func is_false(actual: bool) -> void:
-		_eval(! actual, "expected false, actual is true")
+		_eval("is_false", ! actual, "expected false, actual is true")
 		
 	func is_null(actual: Variant) -> void:
-		_eval(actual == null, "expected null, actual is not null: {actual}".format({"actual": actual}))
+		_eval("is_null", actual == null, "expected null, actual is not null: {actual}".format({"actual": actual}))
 		
 	func is_not_null(actual: Variant) -> void:
-		_eval(actual != null, "expected non-null, actual is null")
+		_eval("is_not_null", actual != null, "expected non-null, actual is null")
 		
 	func is_true(actual: bool) -> void:
-		_eval(actual, "expected true, actual is false")
+		_eval("is_true", actual, "expected true, actual is false")
 
 	func num_failed() -> int:
 		return results.filter(func(x): return ! x).size()
