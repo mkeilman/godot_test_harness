@@ -8,13 +8,14 @@ class_name TestHarness extends SceneTree
 const RES: String = "res://"
 const SUFFIX_SCRIPT: String = ".gd"
 const PREFIX_TEST: String = "test_"
-const KEY_OBJ = "obj"
+const KEY_SUITE = "suite"
 const KEY_METHODS = "methods"
 const POOP = "poop"
 
 var num_tests: int = 0
 var num_tests_passed: int = 0
 var num_tests_failed: int = 0
+var passed: bool = true
 var this_file: String
 var test_args: Array
 var test_files: Array[String]
@@ -43,11 +44,11 @@ func path_to_file(filename: String, path: String) -> String:
 func gather_tests() -> void:
 	for f in test_files:
 		# must make an object to get the methods
-		var o = load(f).new()
-		var m = o.get_method_list()
+		var suite = load(f).new()
+		var m = suite.get_method_list()
 		var names = m.map(func(x): return x.get("name"))
 		var s = names.filter(func(x): return x.begins_with(PREFIX_TEST))
-		tests[f] = {KEY_OBJ: o, KEY_METHODS: s}
+		tests[f] = {KEY_SUITE: suite, KEY_METHODS: s}
 		
 func get_test_files(path: String = ".") -> void:
 	var dir = DirAccess.open(path)
@@ -72,10 +73,29 @@ func run_tests() -> void:
 	for f in tests:
 		DebugUtils.debug_println("RUNNING TESTS FOR " + f)
 		var d: Dictionary = tests[f]
-		var o = d[KEY_OBJ]
+		var suite = d[KEY_SUITE]
 		for m in d[KEY_METHODS]:
 			DebugUtils.debug_println("RUNNING TEST " + m)
-			o.call(m)
+			suite.call(m)
+		var n: int =  num_tests()
+		var p: int = num_passed()
+		var x: int = num_tests()
+		var r: bool = passed()
+		num_tests += n
+		num_passed += p
+		num_failed += x
+		passed = passed && r
+		DebugUtils.debug_println("SUITE {f} RESULTS".format({"f": f}))
+		DebugUtils.debug_println(
+			"TOTAL TESTS: {n}; PASSED: {p}; FAILED: {x}; SUITE RESULT: {r}".format(
+				{
+					"n": n
+					"p": p,
+					"x": x,
+					"r": r,
+				}
+			)
+		)
 
 
 # a test case maps to a method and can have multiple test ops.
@@ -145,13 +165,72 @@ class TestCase:
 # a test suite maps to a file and comprises multiple test cases.
 # it passes only if all of the cases pass
 class TestSuite:
-	var name: String
-	var cases: Array[TestCase] = []
-	var passed: bool = false
+	var results: Array[bool] = []
 	
-	func _init(_name: String, _cases: Array[TestCase]):
-		name = _name
-		cases = _cases
+	func _eval(passed: bool, err_msg: String = "") -> void:
+		var r_txt: String
+		results.append(passed)
+		if passed:
+			r_txt = "[color=green][b]passed[/b][/color]"
+		else:
+			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
 	
-	
+	func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
+		# numbers
+		if expected is int || expected is float:
+			var diff = abs(expected - actual)
+			_eval(
+				diff <= tolerance,
+				"""
+				actual {actual} outside tolerance {tolerance} of {expected}: {diff}
+				""".format({"actual": actual, "tolerance": tolerance, "expected": expected, "diff": diff})
+			)
+			return
 		
+		# everything else, using ==
+		_eval(expected == actual, "actual {actual} != {expected}".format({"actual": actual, "expected": expected}))
+
+	# can compare ints or floats
+	func gt(expected: Variant, actual: Variant) -> void:
+		# numbers
+		if ! expected is int && ! expected is float:
+			eval(false, "expected value must be a number: {expected}".format({"expected": expected}))
+			return
+		_eval(
+			actual > expected,
+			"""
+			actual {actual} <= {expected}: {diff}
+			""".format({"actual": actual, "expected": expected})
+		)
+
+	func has_count(expected: int, actual: Array) -> void:
+		_eval(
+			actual.size() == expected,
+			"""
+			actual has wrong number of items: {actual} != {expected}
+			""".format({"actual": actual.size(), "expected": expected})
+		)
+
+	func is_false(actual: bool) -> void:
+		_eval(! actual, "expected false, actual is true")
+		
+	func is_null(actual: Variant) -> void:
+		_eval(actual == null, "expected null, actual is not null: {actual}".format({"actual": actual}))
+		
+	func is_not_null(actual: Variant) -> void:
+		_eval(actual != null, "expected non-null, actual is null")
+		
+	func is_true(actual: bool) -> void:
+		_eval(actual, "expected true, actual is false")
+
+	func num_failed() -> int:
+		return results.filter(func(x): return ! x).size()
+	
+	func num_passed() -> int:
+		return results.filter(func(x): return x).size()
+
+	func num_tests() -> int:
+		return results.size()
+
+	func passed() -> bool:
+		return num_tests() == num_passed()
