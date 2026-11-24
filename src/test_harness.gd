@@ -77,13 +77,13 @@ func run_tests() -> void:
 		for m in d[KEY_METHODS]:
 			DebugUtils.debug_println("RUNNING TEST " + m)
 			suite.call(m)
-		var n: int = get_num_tests()
-		var p: int = get_num_passed()
-		var x: int = get_num_tests()
-		var r: bool = passed()
+		var n: int = suite.num_tests()
+		var p: int = suite.num_passed()
+		var x: int = suite.num_tests()
+		var r: bool = suite.passed()
 		num_tests += n
-		num_passed += p
-		num_failed += x
+		num_tests_passed += p
+		num_tests_failed += x
 		passed = passed && r
 		DebugUtils.debug_println("SUITE {f} RESULTS".format({"f": f}))
 		DebugUtils.debug_println(
@@ -179,13 +179,14 @@ class TestOp:
 class TestSuite:
 	var results: Array[bool] = []
 	
-	func _eval(passed: bool, err_msg: String = "") -> void:
+	func _eval(did_pass: bool, err_msg: String = "") -> void:
 		var r_txt: String
-		results.append(passed)
-		if passed:
+		results.append(did_pass)
+		if did_pass:
 			r_txt = "[color=green][b]passed[/b][/color]"
 		else:
 			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
+		DebugUtils.debug_println(r_txt, true)
 	
 	func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
 		# numbers
@@ -206,7 +207,7 @@ class TestSuite:
 	func gt(expected: Variant, actual: Variant) -> void:
 		# numbers
 		if ! expected is int && ! expected is float:
-			eval(false, "expected value must be a number: {expected}".format({"expected": expected}))
+			_eval(false, "expected value must be a number: {expected}".format({"expected": expected}))
 			return
 		_eval(
 			actual > expected,
@@ -235,13 +236,13 @@ class TestSuite:
 	func is_true(actual: bool) -> void:
 		_eval(actual, "expected true, actual is false")
 
-	func get_num_failed() -> int:
+	func num_failed() -> int:
 		return results.filter(func(x): return ! x).size()
 	
-	func get_num_passed() -> int:
+	func num_passed() -> int:
 		return results.filter(func(x): return x).size()
 
-	func get_num_tests() -> int:
+	func num_tests() -> int:
 		return results.size()
 
 	func passed() -> bool:
