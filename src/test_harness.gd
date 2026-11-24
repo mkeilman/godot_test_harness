@@ -77,9 +77,9 @@ func run_tests() -> void:
 		for m in d[KEY_METHODS]:
 			DebugUtils.debug_println("RUNNING TEST " + m)
 			suite.call(m)
-		var n: int =  num_tests()
-		var p: int = num_passed()
-		var x: int = num_tests()
+		var n: int = get_num_tests()
+		var p: int = get_num_passed()
+		var x: int = get_num_tests()
 		var r: bool = passed()
 		num_tests += n
 		num_passed += p
@@ -235,13 +235,13 @@ class TestSuite:
 	func is_true(actual: bool) -> void:
 		_eval(actual, "expected true, actual is false")
 
-	func num_failed() -> int:
+	func get_num_failed() -> int:
 		return results.filter(func(x): return ! x).size()
 	
-	func num_passed() -> int:
+	func get_num_passed() -> int:
 		return results.filter(func(x): return x).size()
 
-	func num_tests() -> int:
+	func get_num_tests() -> int:
 		return results.size()
 
 	func passed() -> bool:
