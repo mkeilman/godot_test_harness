@@ -89,7 +89,7 @@ func run_tests() -> void:
 		DebugUtils.debug_println(
 			"TOTAL TESTS: {n}; PASSED: {p}; FAILED: {x}; SUITE RESULT: {r}".format(
 				{
-					"n": n
+					"n": n,
 					"p": p,
 					"x": x,
 					"r": "PASSED" if r else "FAILED",
