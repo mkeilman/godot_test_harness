@@ -8,13 +8,14 @@ class_name TestHarness extends SceneTree
 const RES: String = "res://"
 const SUFFIX_SCRIPT: String = ".gd"
 const PREFIX_TEST: String = "test_"
+const PREFIX_TEST_CASE: String = "TestHarness.TestCase."
 const KEY_OBJ = "obj"
 const KEY_METHODS = "methods"
-const POOP = "poop"
 
 var num_tests: int = 0
 var num_tests_passed: int = 0
 var num_tests_failed: int = 0
+var passed: bool = true
 var this_file: String
 var test_args: Array
 var test_files: Array[String]
@@ -30,7 +31,7 @@ func _run() -> void:
 	get_test_files()
 	gather_tests()
 	run_tests()
-	quit()
+	quit(0 if passed else 100)
 
 func is_valid_file(filename: String, dir: String) -> bool:
 	return filename.begins_with(PREFIX_TEST) && \
@@ -42,12 +43,30 @@ func path_to_file(filename: String, path: String) -> String:
 
 func gather_tests() -> void:
 	for f in test_files:
+		# each
 		# must make an object to get the methods
-		var o = load(f).new()
-		var m = o.get_method_list()
+		var script = load(f)
+		var suite = script.new()
+		var m = suite.get_method_list()
 		var names = m.map(func(x): return x.get("name"))
 		var s = names.filter(func(x): return x.begins_with(PREFIX_TEST))
-		tests[f] = {KEY_OBJ: o, KEY_METHODS: s}
+		tests[f] = {
+			KEY_OBJ: suite,
+			KEY_METHODS: s,
+		}
+		# find the test ops
+		#var lines: Array[String] = script.source_code.split("\n").map(func(x): return x.trim())
+		#var case_indices: Array[int] = s.map(func(x): return lines.find(x))
+		#for i in range(case_indices.size() - 1):
+		#	var j = case_indices[i]
+		#	while j < case_indices[i + 1]:
+		#		j += 1
+		#		var line = lines[j]
+		#		if ! line.begins_with(PREFIX_TEST_CASE):
+		#			continue
+		#		var op = line.substr(0, line.find("("))
+			
+		
 		
 func get_test_files(path: String = ".") -> void:
 	var dir = DirAccess.open(path)
@@ -72,10 +91,25 @@ func run_tests() -> void:
 	for f in tests:
 		DebugUtils.debug_println("RUNNING TESTS FOR " + f)
 		var d: Dictionary = tests[f]
-		var o = d[KEY_OBJ]
+		var suite = d[KEY_OBJ]
 		for m in d[KEY_METHODS]:
 			DebugUtils.debug_println("RUNNING TEST " + m)
-			o.call(m)
+			suite.call(m)
+		num_tests += suite.results.size()
+		num_tests_passed += suite.num_passed()
+		num_tests_failed += suite.num_failed()
+		passed = passed && suite.passed()
+		DebugUtils.debug_println("SUITE {f} RESULTS:".format({"f": f}))
+		DebugUtils.debug_println(
+			"\t{n} TESTS RUN; {p} PASSED; {x} FAILED; SUITE {r}".format(
+				{
+					"n": suite.results.size(),
+					"p": suite.num_passed(),
+					"x": suite.num_failed(),
+					"r": "PASSED" if suite.passed() else "FAILED"
+				}
+			)
+		)
 
 
 # a test case maps to a method and can have multiple test ops.
@@ -139,19 +173,99 @@ class TestCase:
 			r_txt = "[color=green][b]passed[/b][/color]"
 		else:
 			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
-		#DebugUtils.debug_println(r_txt, true)
+		DebugUtils.debug_println(r_txt, true)
 
 
+class TestOp:
+	var passed: bool = false
+	
+	func eval(did_pass: bool, err_msg: String = "") -> void:
+		var r_txt: String
+		passed = did_pass
+		if did_pass:
+			r_txt = "[color=green][b]passed[/b][/color]"
+		else:
+			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
+		DebugUtils.debug_println(r_txt, true)
+	
 # a test suite maps to a file and comprises multiple test cases.
 # it passes only if all of the cases pass
 class TestSuite:
-	var name: String
+	#var name: String
 	var cases: Array[TestCase] = []
-	var passed: bool = false
+	# could also be a dict? or array of arrays
+	var results: Array[bool] = []
+	# default is true so that noops "pass"
+	#var passed: bool = true
 	
-	func _init(_name: String, _cases: Array[TestCase]):
-		name = _name
-		cases = _cases
+	#func _init(_name: String, _cases: Array[TestCase]):
+	#	name = _name
+	#	cases = _cases
 	
-	
+	# every call to eval adds a test ca
+	func eval(passed: bool, err_msg: String = "") -> void:
+		var r_txt: String
+		results.append(passed)
+		if passed:
+			r_txt = "[color=green][b]passed[/b][/color]"
+		else:
+			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
+		DebugUtils.debug_println(r_txt, true)
+
+	func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
+		# numbers
+		if expected is int || expected is float:
+			var diff = abs(expected - actual)
+			eval(
+				diff <= tolerance,
+				"""
+				actual {actual} outside tolerance {tolerance} of {expected}: {diff}
+				""".format({"actual": actual, "tolerance": tolerance, "expected": expected, "diff": diff})
+			)
+			return
 		
+		# everything else, using ==
+		eval(expected == actual, "actual {actual} != {expected}".format({"actual": actual, "expected": expected}))
+
+	# can compare ints or floats
+	func gt(expected: Variant, actual: Variant) -> void:
+		# numbers
+		if ! expected is int && ! expected is float:
+			eval(false, "expected value must be a number: {expected}".format({"expected": expected}))
+			return
+		eval(
+			actual > expected,
+			"""
+			actual {actual} <= {expected}: {diff}
+			""".format({"actual": actual, "expected": expected})
+		)
+
+	func has_count(expected: int, actual: Array) -> void:
+		eval(
+			actual.size() == expected,
+			"""
+			actual has wrong number of items: {actual} != {expected}
+			""".format({"actual": actual.size(), "expected": expected})
+		)
+
+	func is_false(actual: bool) -> void:
+		eval(! actual, "expected false, actual is true")
+		
+	func is_null(actual: Variant) -> void:
+		eval(actual == null, "expected null, actual is not null: {actual}".format({"actual": actual}))
+		
+	func is_not_null(actual: Variant) -> void:
+		eval(actual != null, "expected non-null, actual is null")
+		
+	func is_true(actual: bool) -> void:
+		eval(actual, "expected true, actual is false")
+
+	func num_failed() -> int:
+		return results.filter(func(x): return ! x).size()
+		
+	func num_passed() -> int:
+		return results.filter(func(x): return x).size()
+		
+	func passed() -> bool:
+		return results.is_empty() || results.all(func(x): return x)
+	
