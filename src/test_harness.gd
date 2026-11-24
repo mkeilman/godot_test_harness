@@ -79,7 +79,7 @@ func run_tests() -> void:
 			suite.call(m)
 		var n: int = suite.num_tests()
 		var p: int = suite.num_passed()
-		var x: int = suite.num_tests()
+		var x: int = suite.num_failed()
 		var r: bool = suite.passed()
 		num_tests += n
 		num_tests_passed += p
@@ -87,105 +87,53 @@ func run_tests() -> void:
 		passed = passed && r
 		DebugUtils.debug_println("SUITE {f} RESULTS".format({"f": f}))
 		DebugUtils.debug_println(
-			"TOTAL TESTS: {n}; PASSED: {p}; FAILED: {x}; SUITE RESULT: {r}".format(
+			"TOTAL TESTS: {n}; PASSED: {p} ({pp})%; FAILED: {x} ({xp})%; SUITE RESULT: {r}".format(
 				{
 					"n": n,
 					"p": p,
+					"pp": snappedf(100.0 * float(p) / n, 0.01),
 					"x": x,
-					"r": "PASSED" if r else "FAILED",
+					"xp": snappedf(100.0 * float(x) / n, 0.01),
+					"r": TestUtils.pass_fail_str(r),
 				}
-			)
+			), true
 		)
+	DebugUtils.debug_println(
+		"SUMMARY: {ns} SUITES; {nt} TESTS; {np} PASSED ({pp})%; {nx} FAILED ({xp})%; FINAL RESULT: {r}".format(
+			{
+				"ns": tests.size(),
+				"nt": num_tests,
+				"np": num_tests_passed,
+				"pp": snappedf(100.0 * float(num_tests_passed) / num_tests, 0.01),
+				"nx": num_tests_failed,
+				"xp": snappedf(100.0 * float(num_tests_failed) / num_tests, 0.01),
+				"r": TestUtils.pass_fail_str(passed),
+			}
+		), true
+	)
+
+class TestUtils:
+
+	static func pass_fail_str(res: bool) -> String:
+		return format_result(res, "passed" if res else "failed")
+
+	static func format_result(res: bool, txt: String):
+		var c: String = "green" if res else "red"
+		return "[color={c}][b]{txt}[/b][/color]".format({"c": c, "txt": txt})
 
 
-# a test case maps to a method and can have multiple test ops.
-# it passes only if all of the ops pass
-class TestCase:
-	#var name: String
-	#var ops: Array[TestOp] = []
-	#var passed: bool = false
-	
-	static func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
-		# numbers
-		if expected is int || expected is float:
-			var diff = abs(expected - actual)
-			eval(
-				diff <= tolerance,
-				"""
-				actual {actual} outside tolerance {tolerance} of {expected}: {diff}
-				""".format({"actual": actual, "tolerance": tolerance, "expected": expected, "diff": diff})
-			)
-			return
-		
-		# everything else, using ==
-		eval(expected == actual, "actual {actual} != {expected}".format({"actual": actual, "expected": expected}))
-
-	# can compare ints or floats
-	static func gt(expected: Variant, actual: Variant) -> void:
-		# numbers
-		if ! expected is int && ! expected is float:
-			eval(false, "expected value must be a number: {expected}".format({"expected": expected}))
-			return
-		eval(
-			actual > expected,
-			"""
-			actual {actual} <= {expected}: {diff}
-			""".format({"actual": actual, "expected": expected})
-		)
-
-	static func has_count(expected: int, actual: Array) -> void:
-		eval(
-			actual.size() == expected,
-			"""
-			actual has wrong number of items: {actual} != {expected}
-			""".format({"actual": actual.size(), "expected": expected})
-		)
-
-	static func is_false(actual: bool) -> void:
-		eval(! actual, "expected false, actual is true")
-		
-	static func is_null(actual: Variant) -> void:
-		eval(actual == null, "expected null, actual is not null: {actual}".format({"actual": actual}))
-		
-	static func is_not_null(actual: Variant) -> void:
-		eval(actual != null, "expected non-null, actual is null")
-		
-	static func is_true(actual: bool) -> void:
-		eval(actual, "expected true, actual is false")
-
-	static func eval(passed: bool, err_msg: String = "") -> void:
-		var r_txt: String
-		if passed:
-			r_txt = "[color=green][b]passed[/b][/color]"
-		else:
-			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
-		DebugUtils.debug_println(r_txt, true)
-
-
-class TestOp:
-	var passed: bool = false
-	
-	func eval(did_pass: bool, err_msg: String = "") -> void:
-		var r_txt: String
-		passed = did_pass
-		if did_pass:
-			r_txt = "[color=green][b]passed[/b][/color]"
-		else:
-			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
-		DebugUtils.debug_println(r_txt, true)
-	
 # a test suite maps to a file and comprises multiple test cases.
 # it passes only if all of the cases pass
 class TestSuite:
 	var results: Array[bool] = []
 	
 	func _eval(did_pass: bool, err_msg: String = "") -> void:
-		var r_txt: String
 		results.append(did_pass)
-		if did_pass:
-			r_txt = "[color=green][b]passed[/b][/color]"
-		else:
-			r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
+		var r_txt: String = TestUtils.pass_fail_str(did_pass) + ("" if did_pass else " - " + err_msg)
+		#if did_pass:
+		#	r_txt = "[color=green][b]passed[/b][/color]"
+		#else:
+		#	r_txt = "[color=red][b]failed[/b][/color] - " + err_msg
 		DebugUtils.debug_println(r_txt, true)
 	
 	func eq(expected: Variant, actual: Variant, tolerance: float = 0.0) -> void:
