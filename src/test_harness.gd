@@ -54,19 +54,6 @@ func gather_tests() -> void:
 			KEY_OBJ: suite,
 			KEY_METHODS: s,
 		}
-		# find the test ops
-		#var lines: Array[String] = script.source_code.split("\n").map(func(x): return x.trim())
-		#var case_indices: Array[int] = s.map(func(x): return lines.find(x))
-		#for i in range(case_indices.size() - 1):
-		#	var j = case_indices[i]
-		#	while j < case_indices[i + 1]:
-		#		j += 1
-		#		var line = lines[j]
-		#		if ! line.begins_with(PREFIX_TEST_CASE):
-		#			continue
-		#		var op = line.substr(0, line.find("("))
-			
-		
 		
 func get_test_files(path: String = ".") -> void:
 	var dir = DirAccess.open(path)
