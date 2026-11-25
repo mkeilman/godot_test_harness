@@ -87,26 +87,26 @@ func run_tests() -> void:
 		passed = passed && r
 		DebugUtils.debug_println("SUITE {f} RESULTS".format({"f": f}))
 		DebugUtils.debug_println(
-			"TOTAL TESTS: {n}; PASSED: {p} ({pp})%; FAILED: {x} ({xp})%; SUITE RESULT: {r}".format(
+			"TOTAL TESTS: {n}; PASSED: {p} ({pp}%); FAILED: {x} ({xp}%); SUITE RESULT: {r}".format(
 				{
 					"n": n,
 					"p": p,
-					"pp": snappedf(100.0 * float(p) / n, 0.01),
+					"pp": snappedf(0.0 if n <= 0 else 100.0 * float(p) / n, 0.01),
 					"x": x,
-					"xp": snappedf(100.0 * float(x) / n, 0.01),
+					"xp": snappedf(0.0 if n <= 0 else 100.0 * float(x) / n, 0.01),
 					"r": TestUtils.pass_fail_str(r),
 				}
 			), true
 		)
 	DebugUtils.debug_println(
-		"SUMMARY: {ns} SUITES; {nt} TESTS; {np} PASSED ({pp})%; {nx} FAILED ({xp})%; FINAL RESULT: {r}".format(
+		"SUMMARY: {ns} SUITES; {nt} TESTS; {np} PASSED ({pp}%); {nx} FAILED ({xp}%); FINAL RESULT: {r}".format(
 			{
 				"ns": tests.size(),
 				"nt": num_tests,
 				"np": num_tests_passed,
-				"pp": snappedf(100.0 * float(num_tests_passed) / num_tests, 0.01),
+				"pp": snappedf(0.0 if num_tests <= 0 else 100.0 * float(num_tests_passed) / num_tests, 0.01),
 				"nx": num_tests_failed,
-				"xp": snappedf(100.0 * float(num_tests_failed) / num_tests, 0.01),
+				"xp": snappedf(0.0 if num_tests <= 0 else 100.0 * float(num_tests_failed) / num_tests, 0.01),
 				"r": TestUtils.pass_fail_str(passed),
 			}
 		), true
